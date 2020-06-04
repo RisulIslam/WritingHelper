@@ -1,4 +1,4 @@
-# SuggestMe
+# WritingHelper
 Suggest Matching Sentence from a Corpus based on given keywords
 
 Purpose: This NLP based project was created to follow the writing style and word chosing capability of my PhD supervisor
