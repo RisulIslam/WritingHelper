@@ -25,5 +25,11 @@ Prerequisite: Python 3+
 
 
 
-Packages needed: 
+Packages needed: pandas, operator, collections, os, sys, codecs, tkinter, nltk, StringIO, pdfminer, getopt
+
+
+How to run the tool:
+  1. Download the project
+  2. install the prerequisite packages
+  3. run the main.py usinf F5
 
