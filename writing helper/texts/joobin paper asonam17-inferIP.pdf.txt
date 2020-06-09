@@ -1,0 +1,665 @@
+inferip: extracting actionable information from
+
+security discussion forums
+
+joobin gharibshah∗, tai ching li∗, maria solanas vanrell∗, andre castro∗,
+konstantinos pelechrinis†, evangelos e. papalexakis∗ and michalis faloutsos∗
+
+∗ university of california - riverside, ca
+
+email: {jghar002,tli010,msola004,acast050,epapalex,michalis}@cs.ucr.edu
+† school of information sciences, university of pittsburgh, pittsburgh, pa
+
+email: kpele@pitt.edu
+
+abstract—how much useful information can we extract from
+security forums? many security initiatives and commercial enti-
+ties are harnessing the readily public information, but they seem
+to focus on structured sources of information. our goal here is
+to extract information from hacker forums, whose information
+is provided in ad hoc and unstructured ways. here, we focus
+on the problem of identifying malicious ips addresses, when
+these are being reported in the forums. we develop a method
+to automate the identiﬁcation of malicious ips with the design
+goal of being independent of external sources. a key novelty is
+that we use a matrix decomposition method to extract latent
+features of the behavioral information of the users, which we
+combine with textual
+information from the related posts. as
+key design feature, our technique can be applied to different
+language forums since it relies on a simple nlp solution in
+combination with behavioral features. in particular, our solution
+only needs a small number of keywords in the new language plus
+the user’s behavior captured by speciﬁc features. we also develop
+a tool to automate the data collection from security forums. we
+collect approximately 600k posts from 3 different forums. our
+method exhibits high classiﬁcation accuracy, while the precision
+of identifying malicious ip in post is greater than 88% in all
+three sites. furthermore, by applying our method, we ﬁnd up
+to 3 times more potentially malicious ips than compared to the
+reference blacklist virustotal. as the cyber-wars are becoming
+more intense, having early accesses to useful information becomes
+more imperative to remove the hackers ﬁrst-move advantage, and
+our work is a solid step towards this direction.
+
+keywords: security, online communities mining
+
+i.
+
+introduction
+
+to extract as much useful
+
+how can we remove the advantage of surprise from
+malicious hackers? this is the overarching goal of
+this
+project. in this work, we address a speciﬁc question. in
+particular, we want
+information
+from hacker/security forums as possible in order to perform
+(possibly early) detection of malicious ips, e.g., prior to
+their appearance on blacklists. the latter can exhibit large
+delays in their update and hence, new ways for labeling
+malicious ips are needed [8]. in this study we will use the
+term “hacker forums” to describe online forums with a focus
+on security and system administration. interestingly, we can
+classify these forums into categories: (a) main stream fo-
+rums, like wilderssecurity, and (b) “fringe” forums, like
+offensivecommunity, where we ﬁnd users with names
+like satan911. some of the fringe forums have been known to
+have hackers boast of attacks they have mounted, or sell tools
+and infrastructure for malicious purposes (think rent-a-botnet).
+for example, in our dataset there is a post that mentions “i give
+
+you a second server to have your fun with. multiple websites
+on this server. so let’s see if anyone can actually bring down
+the server”. right after that the hacker posted the ip, username
+and password for anyone to access the server. in fact, there is a
+show-off section in these forums for people to broadcast their
+hacking “skills”.
+
+to reiterate, the central theme in our work is to develop
+techniques for extracting information from a security forum
+with the goal of informing a security analyst. the particular
+problem of our study is to identify malicious entities, and more
+speciﬁcally malicious ips. formally, our problem is as follows:
+key question: malicious ip detection. given a set of
+posts pf that may contain ip addresses and users uf of a
+security forum f , as well as, the features φp, ∀p ∈ pf and
+φu, ∀u ∈ uf for the posts and the users respectively, can we
+determine if a given ip address i is malicious or not?
+
+the set of features pf includes attributes such as the text
+of the post, the posting user, the time of post, etc., while uf
+includes information such as the date of a user joining the
+forum, the number of posts the user has made etc.
+table i: extracting useful information; number of malicious ips
+found by inferip and not by virustotal.
+
+ip found by
+
+dataset
+
+total ip virus
+total
+216
+339
+133
+
+4338
+7850
+8121
+
+inferip
+only
+670
+617
+806
+
+wilders security
+offensive community
+ashiyane
+most previous studies in this area have focused on min-
+ing structured information sources, such as security reports.
+in fact many efforts focus on addressing security problems
+using knowledge obtained from the web, as well as, social
+and information networks, these efforts are mainly focused
+on analyzing structured sources (e.g., [9]). however, studies
+assessing the usefulness of (unstructured) information in online
+forums have only recently appeared (e.g., [14]). these studies
+are mostly exploratory in that they provide evidence of the
+usefulness of the data in the forums, but do not provide a
+systematic methodology or ready-to-use tools, which is the
+goal of our work. we discuss existing literature in more detail
+later in this section.
+
+the motivation of our work is to enhance our security
+knowledge and to complement, and not to replace, existing
+
+efforts for detecting malicious ips. for instance, ip blacklists
+enlist an ip as malicious after a number of reports above a
+pre-deﬁned threshold have been made for the speciﬁc address.
+depending on the threshold and the reactivity of the affected
+users/systems, this might take several days, weeks or months
+to happen. therefore, a system whose core is the solution of
+our key question can identify and recommend (potentially)
+malicious ip address to blacklist services and ﬁrewalls.
+
+in addition to the textual
+
+we propose , a systematic method to identify malicious
+ips among the ip addresses which are mentioned in security
+forums. a key novelty is that we use the behavioral information
+of the users,
+information from
+the related posts. we customize and use a sparse matrix
+regression method on this expanded set of features. by design,
+our framework is applicable to forums in different languages
+as it relies on and the behavioral patterns and keywords and not
+a complex language-speciﬁc nlp technique. from a technical
+point of view the challenge in designing a solution to our key
+question is most ips mentioned in these forums are not mali-
+cious. we show that our system can add a signiﬁcant number of
+previously unreported ip address to existing blacklist services.
+we develop a customizable and ﬂexible crawler for forums,
+that only requires a simple speciﬁcation ﬁle. using our crawler,
+we collect data from three forums, two english and one in farsi
+for a total number of more than 30k users and 600k posts. we
+use virustotal [3] as our reference blacklist ip addresses, since
+it is an aggregator, and combines the information from over 60
+other blacklists and resources. our results can be summarized
+into the following points:
+
+a. our method exhibits precision and recall greater
+than 88% and 85% respectively, and an accuracy over
+malicious class above 86% in the 10-fold cross validation
+tests we conducted for the three different forums. in partially
+answering our key question, if our method labels a currently
+non-blacklisted ip as malicious, there is a high chance that it
+is malicious, given our high precision.
+
+b. our method identiﬁes three times more malicious
+ips compared to virustotal. we ﬁnd more than 2000 potential
+malicious ips that were never reported by virustotal among
+our three forums.
+
+ii. data collection and basic properties
+
+to our study;
+
+(i) wilderssecutiry [4],
+
+we have collected data from three different
+
+forums
+(ii)
+relevant
+offensivecommunity [2], (iii) ashiyane [1]. the ﬁrst
+two forums are mainly written in english, while the last forum
+is an iranian forum, in farsi1. some basic statistics for these
+forums are presented in table ii. offensivecommunity
+and ashiyane are two fringe forums in different languages.
+in these forums there is a section where people openly boast
+about their achievement in hacking. they share their ideas
+and tutorials on how to break into vulnerable networks. on
+the other hand, wilderssecurity as a main stream forum
+is mostly used to protect non-experts against attacks such
+as browser hijacking, and provide solutions for their security
+problems. for completeness, we present some of the terms we
+use here. a user is deﬁned by a login name registered with the
+site. the term post refers to a single unit of content generated
+by a user. a thread refers to a collection of posts that are
+replies to a given initiating post.
+
+1our software and datasets will be made available at: https://github.com/
+
+hackerchater/
+
+forum
+
+table ii: the collected forums.
+users
+
+threads posts
+
+wilders security
+offensive comm.
+ashiyane
+
+28661
+3542
+67004
+
+302710
+25538
+279309
+
+14836
+5549
+22698
+
+active
+days
+5227
+1508
+4978
+
+figures 1 and 2 present the cumulative complementary
+distribution function for the number of posts per user and the
+number of threads per users respectively. as we can see in
+all the cases the distributions are skewed, that is, most of the
+users contribute few posts in the forums and engage with few
+threads. in wilders security 85% of users post less than 10
+posts each, while 5.2% of the users post more than 50 posts.
+70% of the users post in only one thread and only 8% of the
+users are active in more than 10 threads this skewed behavior
+is typical for online users and communities [7]. we develop
+features to capture aspects of both these user properties, as
+we will see next. due to space limitations, we cannot present
+plots for more features that we use in our classiﬁcation.
+
+groundtruth for training and testing. in order to build
+and evaluate, our model we need to obtain a reasonably labeled
+dataset from ip addresses that appear in the posts of the
+security forums. for that, we use the virustotal service
+and assign malicious labels to an ip that has been reported
+by this service. the number of malicious ips that we have
+use with the corresponding posts are shown in table i as the
+ip found by virustotal. note that the absence of a report on
+virustotal does not necessarily mean that the ip is benign.
+however, a listed ip address is most likely malicious, since
+virustotal as most blacklist sites require a high threshold
+of conﬁdence for blacklisting an address. this way, we ﬁnd in
+total 688 malicious ips for our forums as shown in table i.
+
+using this labeling process we have collected all the ips
+that have appeared on our forums prior to their report on
+virustotal. for building our model, we also randomly
+select an equal number of ips that have not been reported as
+malicious and via manual inspection further assess their status.
+finally, for every security forum we have a different dataset
+and hence, we build a different model.
+
+(a) wilderssec.
+fig. 1: ccdf of the number of posts per user (log-log scale).
+
+(b) offensiveco.
+
+(c) ashiyane
+
+(a) wilderssec.
+fig. 2: ccdf of the number of thread per user (log-log scale).
+
+(b) offensiveco.
+
+(c) ashiyane
+
+iii.
+
+inferip: malicious ip detection
+
+we propose a method to identify whether an ip address
+within a post is malicious. for example, although many users
+report a malicious ip address, such as one that is attacking the
+
+10010110210310410−310−210−1100101102number of postspercentage of users10010110210310−210−1100101102number of postspercentage of users10010110210310410−310−210−1100101102number of postspercentage of users10010110210310410−310−210−1100101102number of threadspercentage of users10010110210310−210−1100101102number of threadspercentage of users10010110210310410−310−210−1100101102number of threadspercentage of usersuser’s network, there are also users that will mention a benign
+ip address when people discuss about network tutorials like
+setting up putty or initiating a ssh connection.
+
+while this task is simple for a human, it is non-trivial to
+automate. adding to the challenge, different communities use
+different terminology and even different languages altogether
+(english and farsi in our case). in order to overcome these
+challenges, we use a diverse set of features and build a model
+to identify ips that are potentially malicious.
+
+our approach consists of four steps that each hides non-
+
+trivial novelties:
+
+step 1: we consider the user behavior and extract features
+
+that proﬁle users that post ip-reporting posts.
+
+step 2: we extract keywords from the posts and use
+information gain to identify the 100 most informative features.
+step 3: we identify meaningful latent feature sets using
+
+an unsupervised co-clustering approach [12].
+
+step 4: we train a classiﬁer using these latent feature sets
+
+using 10-fold cross validation.
+
+we describe each step in more detail.
+step 1: behavioral features. we associate each user of
+the forum with a set of 11 features that capture their behavior.
+in particular:
+
+user
+
+has contributed to
+
+initiated by the user
+
+generates at least one post
+
+• number of posts; the total number of posts made by the
+• number of threads; the total number of threads the user
+• number of threads initiated; the total number of threads
+• average thread entropy; the average entropy of the user
+distribution of the threads in which the user has con-
+tributed to
+• number of active days; the number of days that the user
+• average day entropy; the average entropy of the user
+distribution of the posts made on the days that the user
+is active
+• active lifetime; the number of days between the ﬁrst and
+• wait time; the number of days passed between the day
+the user joined the forum and the day the user contributed
+their ﬁrst post
+• average post length; the average number of characters in
+• median post length; the median number of characters in
+• maximum post length; the number of character’s in the
+
+the last post of the user
+
+the user’s posts
+
+the user’s posts
+
+user’s longest post
+step 2: contextual features. apart from the aforemen-
+tioned behavioral features we also include features related with
+the context in which an ip address appears within a post. in
+particular, we consider the frequency of the words (except
+stop-words) in the posts. words that are frequent only in few
+documents (posts in our case) are more informative than those
+that appear frequently on a larger corpus [13]. to this end, we
+use tf-idf to weight the various words/terms that appear in
+our data. after calculating the frequency and the corresponding
+weights of each word in the dataset we end up with more
+than 10,000 features/terms. hence, in the next step we select
+discriminative features by extracting latent features.
+
+we begin by performing feature selection in order to iden-
+
+forum
+
+table iii: selecting a classiﬁer: overall accuracy.
+logistic
+regression
+
+3nn
+
+wilders security
+offensive comm.
+ashiyane
+
+naive
+bayes
+91.9%
+84.1%
+85.1%
+
+87.1 % 94.8%
+83.2% 86.5%
+82.3% 94%
+
+table iv: inferip evaluation: 10-fold cross validation evaluation
+(using logistic regression).
+forum
+
+instances precision recall
+
+roc
+area
+0.96
+0.91
+0.92
+
+wilders security
+offensive comm.
+ashiyane
+
+362
+342
+446
+
+0.9
+0.88
+0.9
+
+0.94
+0.85
+0.92
+
+tify the most informative features by applying the information
+gain framework [15]. furthermore, in order to avoid overﬁtting
+we pick a random subset of posts from the whole dataset and
+select the highest ranked features based on information gain
+score. in this way, a subset of discriminative keywords, 100 in
+our model, are selected. it turns out that each user uses only
+a small number of those words, resulting in a sparse dataset
+which we wish to exploit in our model.
+
+step 3: identifying latent feature sets. we also like to
+leverage latent similarities of different posts in some of the di-
+mensions spanned by post features and behavioral features for
+the writer of the post. essentially, we seek to identify groups of
+highly similar posts under a small number of features, which
+does not necessarily span the full set of features. the reason
+why we wish to pinpoint a subset of the features instead of
+the entire set is because this way we are able to detect subtle
+patterns that may go undetected if we require post similarity
+across all the features. we call those sets of feastures latent
+feature sets . to this end, we apply a soft co-clustering method,
+sparse matrix regression (smr) [12], to exploit the sparsity
+and extract latent features of the post containing ips. given a
+matrix x of posts × features, its soft co-clustering via smr
+can be posed as the following optimization problem:
+
+min
+
+ar≥0,br≥0
+
+arbt
+
+r (cid:107)2
+
+f + λ
+
+|ar(i)| + λ
+
+|br(j)|
+
+r
+
+i,r
+
+j,r
+
+where ar and br are vectors that “describe" co-cluster r, which
+we explain below. each ar is a vector with as many dimensions
+as posts. each value ar(i) expresses whether post i is afﬁliated
+with co-cluster r. similarly, br is a vector with as many
+dimensions as features, and br(j) expresses whether feature j
+is afﬁliated with with co-cluster r. parameter λ controls how
+sparse the co-cluster assignments are, effectively controlling
+the co-cluster size. as we increase λ we get sparser results,
+hence cleaner co-clustering assignments. we tune λ via trial-
+and-error so that we obtain clean but non-empty co-clusters,
+and we select λ = 0.01 in our case.
+
+step 4: training the model. we subsequently train a
+number of classiﬁers using the selected features based on a
+matrix. in particular, we examine (a) a naive bayes classiﬁer,
+(b) a k-nearest neighbor classiﬁer and (c) a logistic regression
+classiﬁer. our 10-fold cross validation indicates that the lo-
+gistic regression classiﬁer outperforms knn and naive bayse,
+achieving high accuracy, precision and recall (see table iii).
+
+(cid:88)
+
+(cid:88)
+
+(cid:107)x − r(cid:88)
+
+applying inferip on the forums. having conﬁdence
+in our classiﬁer, we want to apply it on the posts of the
+forums except
+the ones that we used in our groundtruth.
+naturally, we use the logistic regression classiﬁer as it ex-
+hibits the best performance. with inferip, we ﬁnd an addi-
+tional 670 malicious ips in wilderssecurity, and 617 in
+offensivecommunity 806 in ashiyane (see table i). in
+other words, inferip enables us to ﬁnd three times additional
+malicious ips in total compared to the ips found on virustotal.
+it is interesting to observe that this factor varies among our
+three sites. for ashiyane, our method ﬁnds roughly 6 times
+additional malicious ips. with a precision of roughly around
+90% and considering small amount of false positive rate, our
+method can add a signiﬁcant number of malicious ips to a
+blacklist. using the limited manual inspection, we conﬁrm that
+the precision of the method on out of sample data is in the
+order of 88%.
+
+iv. related work
+
+we brieﬂy discuss two categories of relevant research.
+a. analyzing structured security sources. there is a long
+line of research studying the ontology of cyber security and the
+automatic extraction of information from structured security
+documents (e.g., [9], [6]). this work is complementary to ours
+as it focuses on different information sources with different
+challenges.
+
+b. analyzing online security forums. recently security
+forums have been the focus of various studies that showcase
+the usefulness of the information present in security forums.
+for example, motoyama et al. [11] present a comprehensive
+statistical analysis in underground forums. others studies focus
+on the users’ classiﬁcation or the discovery of the relationships
+between the forum’s members [16], [5]. extracting different
+discussion topic in the forums and classifying the language of
+the codes posted in the forum has been done in [14]. contrary
+to these studies, our work emphasizes on the development of
+automated systems that actually exploit the wealth of infor-
+mation in these security forums in order to enhance security.
+similar to detecting malicious users on commenting platforms
+has been done on [10].
+
+v. conclusion
+
+the overarching take away message from our work is
+that there could be a wealth of useful information in security
+forums. the challenge is that the information is unstructured
+and we need novel methods to extract that information. a key
+insight of our work is that using behavioral and text-based
+features can provide promising results.
+
+in support of this assertion, we develop a systematic
+method to extract malicious ip addresses from chatter in
+security forums. we utilize both behavioral as well as textual
+features and show that we can detect malicious ips with high
+accuracy, precision and recall using simple classiﬁers. our
+results at table i are promising. we ﬁnd three times as many
+additional malicious ips as the original malicious ips identiﬁed
+by virustotal. while this does not mean that all of the
+ips that we ﬁnd are malicious, our high precision (hovering
+around 90% in table iv) suggests that most of them are indeed
+malicious.
+
+in the future, we plan on extending our work to enhance
+other security tasks by extracting as much useful information
+as possible from security forums. our ﬁrst goal is to detect
+malicious urls mentioned in the forums. our second and
+
+more ambitious goal
+is to identify the emergence of new
+malware, threats, and possibly attacks, which we expect to
+see as large numbers of panicky posts. finally, our goal is to
+identify malicious users, since interestingly, some users seem
+to be promoting or maybe even selling hacking tools.
+
+vi. acknowledgments
+
+the authors thank the anonymous reviewers for their useful
+comments. this material is based upon work supported by
+the bourns college of engineering at university of california,
+riverside, and dhs st cyber security (ddosd) hshqdc-
+14-r-b00017 grant. any opinions, ﬁndings, and conclusions
+or recommendations expressed in this material are those of
+the author(s) and do not necessarily reﬂect the views of the
+national science foundation or other funding parties.
+
+references
+
+[1] ashiyane. http://www.ashiyane.org/forums/.
+[2] offensive community. http://www.offensivecommunity.net.
+[3] virustotal. http://www.virustotal.com.
+[4] wilders security. http://www.wilderssecurity.com.
+[5] a. abbasi, w. li, v. benjamin, s. hu, and h. chen. descriptive
+in 2014 ieee
+analytics: examining expert hackers in web forums.
+joint intelligence and security informatics conference, pages 56–63,
+sept 2014.
+
+[6] c. blanco, j. lasheras, r. valencia-garcía, e. fernández-medina,
+a. toval, and m. piattini. a systematic review and comparison
+in 2008 third international conference on
+of security ontologies.
+availability, reliability and security, pages 813–820, march 2008.
+
+[7] p. devineni, d. koutra, m. faloutsos, and c. faloutsos. if walls could
+talk: patterns and anomalies in facebook wallposts. in proceedings of
+the 2015 ieee/acm international conference on advances in social
+networks analysis and mining 2015, asonam ’15, pages 367–374,
+new york, ny, usa, 2015. acm.
+
+[8] h. hang, a. bashir, m. faloutsos, c. faloutsos, and t. dumitras.
+“infect-me-not": a user-centric and site-centric study of web-based
+malware. in ifip networking, pages 234–242, may 2016.
+
+[9] m. iannacone, s. bohn, g. nakamura, j. gerth, k. huffer, r. bridges,
+e. ferragut, and j. goodall. developing an ontology for cyber security
+in proceedings of the 10th annual cyber and
+knowledge graphs.
+information security research conference, cisr ’15, pages 12:1–12:4,
+new york, ny, usa, 2015. acm.
+
+[10] t. c. li, j. gharibshah, e. e. papalexakis, and m. faloutsos. trollspot:
+in proceedings of
+detecting misbehavior in commenting platforms.
+the 2017 ieee/acm international conference on advances in social
+networks analysis and mining 2017, asonam ’17, 2017.
+
+[11] m. motoyama, d. mccoy, k. levchenko, s. savage, and g. m. voelker.
+an analysis of underground forums. in proceedings of the 2011 acm
+sigcomm conference on internet measurement conference, imc ’11,
+pages 71–80, new york, ny, usa, 2011. acm.
+
+[12] e. e. papalexakis, n. d. sidiropoulos, and r. bro. from k-means to
+higher-way co-clustering: multilinear decomposition with sparse latent
+factors. ieee transactions on signal processing, 61(2):493–506, 2013.
+j. ramos. using tf-idf to determine word relevance in document
+queries. in instructional conference on machine learning, 2003.
+
+[13]
+
+[14] s. samtani, r. chinn, and h. chen. exploring hacker assets in
+underground forums. in ieee international conference on intelligence
+and security informatics (isi), pages 31–36, may 2015.
+
+[15] y. yang and j. o. pedersen. a comparative study on feature selection
+in text categorization. in proceedings of the fourteenth international
+conference on machine learning, icml ’97, pages 412–420, san
+francisco, ca, usa, 1997. morgan kaufmann publishers inc.
+
+[16] x. zhang, a. tsang, w. t. yue, and m. chau. the classiﬁcation
+information systems
+
+of hackers by knowledge exchange behaviors.
+frontiers, 17(6):1239–1251, dec. 2015.
+
+

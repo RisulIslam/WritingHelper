@@ -1,0 +1,1585 @@
+rest: a thread embedding approach for identifying and classifying user-speciﬁed
+
+information in security forums
+
+abstract
+
+how can we extract useful information from a security fo-
+rum? we focus on identifying threads of interest to a se-
+curity professional: (a) alerts of worrisome events, such as
+attacks, (b) offering of malicious services and products, (c)
+hacking information to perform malicious acts, and (d) use-
+ful security-related experiences. the analysis of security fo-
+rums is in its infancy despite several promising recent works.
+novel approaches are needed to address the challenges in this
+domain: (a) the difﬁculty in specifying the “topics” of inter-
+est efﬁciently, and (b) the unstructured and informal nature
+of the text. we propose, rest, a systematic methodology to:
+(a) identify threads of interest based on a, possibly incom-
+plete, bag of words, and (b) classify them into one of the four
+classes above. the key novelty of the work is a multi-step
+weighted embedding approach: we project words, threads and
+classes in appropriate embedding spaces and establish rele-
+vance and similarity there. we evaluate our method with real
+data from three security forums with a total of 164k posts and
+21k threads. first, rest is robustness to initial keyword se-
+lection can extend the user-provided keyword set and thus,
+it can recover from missing keywords. second, rest cate-
+gorizes the threads into the classes of interest with superior
+accuracy compared to ﬁve other methods: rest exhibits an
+accuracy between 63.3-76.9%. we see our approach as a ﬁrst
+step for harnessing the wealth of information of online forums
+in a user-friendly way, since the user can loosely specify her
+keywords of interest.
+
+keywords: embedding, classiﬁcation, weighted
+
+introduction
+
+security forums hide a wealth of information, but mining
+it requires novel methods and tools. the problem is driven
+by practical forces: there is useful information that could
+help improve security, but the volume of the data requires
+an automated method. the challenge is that there is a lot of
+“noise”, there is lack of structure, and an abundance of in-
+formal and hastily written text. at the same time, security
+analysts need receive focused and categorized information,
+which can help their task of shifting through it further. we
+deﬁne the problem more speciﬁcally below.
+
+given a security forum, we want to extract threads of in-
+terest to a security analyst. we consider two associated prob-
+copyright c(cid:13) 2018, association for the advancement of artiﬁcial
+intelligence (www.aaai.org). all rights reserved.
+
+lems that together provide a complete solution. first, the in-
+put is all the data of a forum, and the user speciﬁes its inter-
+est by providing one or more bag-of-words of interest. ar-
+guably, providing keywords is a relatively easy task for the
+user. the goal is to return all the threads that are of interest
+to the user, and we use the term relevant to indicate such
+threads. a key challenge here is how to create a robust solu-
+tion that is not overly sensitive to the omission of potentially
+important keywords. we use the term identiﬁcation to refer
+to this problem.
+
+second, we add one more layer of complexity to the prob-
+lem. to further facilitate the user, we want to group the
+relevant threads into classes. again, the user deﬁnes these
+classes by providing keywords for each class. we refer to
+this step as the classiﬁcation problem. note that the user
+can specify the classes of interest fairly arbitrarily, as long
+as there is training data for the supervised-learning classiﬁ-
+cation.
+
+there is relatively limited work on extracting informa-
+tion from security forums, and even less work on using em-
+bedding techniques in analyzing online forum data. we can
+group prior work in the following categories. first, there is
+work that analyzes security forums to identify malicious ac-
+tivity [16, 22, 4]. moreover, there are some efforts to detect
+malicious users [12, 13] and emerging threats on forums
+and other social networks [18, 17]. second, there are sev-
+eral studies on analyzing online forums without a security
+focus [26, 2]. third, there is a large body of work in embed-
+ding techniques for: (a) analyzing text in general [15, 8], and
+(b) improving text classiﬁcation [3, 23, 21]. also, note that
+there exist techniques that can do transfer learning between
+forums and thus, eliminate the need to have training data for
+every forum [4]. we discuss related work in more detail in
+our related work section.
+
+we propose a systematic approach to identify and clas-
+sify threads of interest based on a multi-step weighted em-
+bedding approach. our approach consists of two parts: (a)
+we propose a similarity-based approach with thread embed-
+ding to extract relevant threads reliably, and b) we propose
+a weighted-embedding based classiﬁcation method to group
+relevant threads into user-deﬁned classes.
+
+the key technical foundation of our approach relies on:
+(a) building on a word embedding to deﬁne thread embed-
+ding, and (b) conducting similarity and classiﬁcation at the
+
+figure 1: an overly-simpliﬁed overview of analyzing a forum using the rest approach: i) project all threads to embedding
+space, ii) select relevant threads using keyword-based selection, iii) expand by adding similar threads, iv) classify the threads
+into classes using supervised learning. we illustrate the embedding space as a three dimensional space.
+
+thread embedding level. figure 1 depicts a high-level vi-
+sualization of the key steps of our approach: (a) we start
+with a word embedding space and we deﬁne a thread em-
+bedding where we project the threads of the forum, (b) we
+identify relevant threads to the user-provided keywords, (c)
+we expand this initial set of relevant threads using thread
+similarity in the thread embedding, (d) we develop a novel
+weighted embedding approach to classify threads into the
+four classes of interest using ensemble learning. in particu-
+lar, we use similarity of words to representing keywords of
+each class in order to up-weight the word embedding vec-
+tors. then we use weighted embeddings to train an ensemble
+classiﬁer using supervised learning.
+
+we evaluate the proposed method with three security fo-
+rums with 163k posts and 21k unique threads. the users in
+these forums seem to have a wide range of goals and in-
+tentions. for the evaluation, we created a labelled dataset of
+more than 1350 labeled threads across three forums, which
+we intend to make available to the research community. we
+provide more information on our datasets in the next section.
+our results can be summarized into the following points:
+a. providing robustness to initial keyword selection.
+we show that our similarity-based expansion of the user-
+deﬁned keywords provides signiﬁcant improvement and sta-
+bility compared to simple keyword-based matching. first,
+the effect of the initial keyword set is minimized: by going
+from 240 to 300 keywords, the keyword-based method iden-
+tiﬁes 25% more threads, while the similarity based method
+increases by only 7%. second, our approach increases the
+number of relevant threads by 73-309% depending on the
+number of keywords. this suggests that our approach is less
+sensitive to omissions of important keywords.
+
+b. the relevant threads are 22-25% of the total
+threads. our approach reduces the amount of threads to 22-
+25% of the initial threads. clearly, these results will vary
+depending on the keywords given by the user and the type
+of the forum.
+
+c. improved classiﬁcation accuracy. our approach clas-
+siﬁes threads of interest in four different class with an
+accuracy of 63.3-76.9% and weighted average f1 score
+
+76.8% and 74.9% consistently outperforming ﬁve other ap-
+proaches.
+
+our work in perspective. our work is building block to-
+wards a systematic, easy to use, and effective mining tool
+for online forums in general. although here we focused on
+security forums, it could easily apply to other forums, and
+provide the users with the ability to deﬁne topics of interest
+by providing one or more set of keywords. we argue that our
+approach is easy to use since it is robust and forgiving w.r.t.
+the initial keyword set.
+
+deﬁnitions and datasets
+
+posts
+users
+threads
+
+offenscomm. hackthissite
+84,745
+5904
+8504
+
+25538
+5549
+3542
+
+ethicalhackers
+54176
+2970
+8745
+
+table 1: the basic statistics of our forums.
+
+we have collected data from three different forums:
+offensivecommunity, hackthissite and ethicalhackers.
+these forums seem to bring together a wide range of users:
+system administrators, white-hat hackers, black-hat hack-
+ers, and users with variable skills, goals and intentions. we
+brieﬂy describe our three forums below.
+
+a. offensivecommunity (oc): this forum seems to be
+on the fringes of legality. as the name suggests, the forum
+focuses on “offensive security”, namely, breaking into sys-
+tems. indeed, many posts provide step by step instructions
+on how to compromise systems, and advertise hacking tools
+and services.
+
+b. hackthissite (ht): as the name suggests, this forum
+has also an attacking orientation. there are threads that de-
+scribe how to break into websites and systems, but there are
+also more general discussions about the users’ experiences
+in cyber-security.
+
+ethicalhackers (eh): this forum seems to consist
+mostly of “white hat” hackers, as its name suggests. many
+threads are about making systems more secure. however,
+
+2
+
+ii) keyword-based selectioniv) classiﬁcationiii) similarity-based selectioninputclassiﬁed outputi) embeddingclass1class2class3keyword based selected threadsimilarity based selected threadforumthreadthere are many discussions with malicious intents are going
+on in this forum. moreover, there are some notiﬁcation dis-
+cussions to alert about emerging threats.
+
+labeled
+
+hacks
+services
+alerts
+experiences
+
+offenscomm. hackthissite
+
+450
+
+450
+
+ethicalhackers
+
+450
+
+#
+201
+205
+27
+17
+
+#
+%
+44%
+49
+45% 242
+6%
+38
+4% 127
+
+#
+%
+11%
+41
+54% 167
+8%
+78
+28% 164
+
+%
+9%
+37%
+17%
+36%
+
+(a)offenscomm.
+
+(b)hackthissite
+
+(c)ethicalhackers
+
+figure 2: ccdf of the number of post per thread (log-log
+scale).
+
+basic forum statistics. we present basic statistics of our
+forums in table 1. we also study some of their properties
+and make the following two observations.
+
+observation 1: more than half of the threads have one
+post! in figure 2, we plot the complementary cumulative
+distribution function of the number of post per thread for our
+forums. we observe the skewed distribution that describes
+the behavior of large systems. in addition, the distribution
+shows that more than half of thread has one single post in
+the threads and 73% of the threads has one or two posts in
+threads.
+
+observation 2: the ﬁrst post deﬁnes the thread. prior
+research [26] seems to conﬁrm something that we intuitively
+expect: the ﬁrst post of the thread pretty much deﬁnes the
+thread. intrigued, we sampled and manually veriﬁed that this
+seems to be the case. speciﬁcally, we inspected a random
+sample of 10% of the relevant threads (found by our ap-
+proach), and we found that more than 97% of the follow up
+posts fall in line with the topic of the thread: while a majority
+of them, express appreciation, agreement etc. for example,
+the follow up posts to a malicious tutorial in offensivecom-
+munity were: “great tut”, “thank you for sharing”, “nice
+post”, “work[s] great for me!”
+
+deﬁning the classes of interest. as we explained in the
+introduction, we want to further help a security analyst by
+giving them the ability to deﬁne classes of interest among the
+threads of interest. these are user-deﬁned classes. to ground
+our study, we focus on the following classes, which we argue
+could be of interest to a security analyst.
+
+a. alerts: these are threads where users are reporting
+about being attacked by a hackers or notifying about ex-
+ploits and vulnerabilities. an example from ethicalhackers
+is a thread with the title ”worm hits unsecured space sta-
+tion laptops” and the ﬁrst line of the ﬁrst post is ”nasa
+spokesman kelly humphries said in a statement that this
+was not the ﬁrst time that the iss had been affected by mal-
+ware, merely calling it a nuisance.”
+
+b. services: these are threads where users are offering or
+requesting malicious hacking services or products. an ex-
+ample from offensivecommunity is a thread with the title
+“ need hacking services” and this ﬁrst line “im new to this
+website. im not a hacker. would like to hire hacking ser-
+vices to hack email account, facebook account and if possi-
+ble iphone.”
+
+table 2: our groundtruth data for each forum and the break-
+down per class.
+
+c. hacks: these are threads where users post detailed
+instructions for performing malicious activities. the differ-
+ence with the above category is that the information is of-
+fered for free here. an example from offensivecommunity
+is a thread titled “hack admin account in xp, vista, win-
+dows 7 and mac - complete beginners guide!!” with a ﬁrst
+line: ”hack administrator account in xp os just by using
+command prompt is one of the easiest ways (without instal-
+lation of any programs).....”. as expected, these posts are
+often lengthy as they convey detailed information.
+
+d. experiences: these are threads where users share their
+experience related to general security topics. often users
+provide a personal story, a review or an article on a cyber-
+security concept or event. for example, in hackthissite
+a thread titled “stupid people stories”, the author explains
+cyber-security mistakes that he made.
+
+the sets of keywords which “deﬁne” each class are shown
+in table 5. clearly, these sets will be provided by the user de-
+pending on classes of interest. note that these keywords are
+also provided to our annotators as hints for labeling process.
+
+establishing the groundtruth
+for validating our
+classiﬁcation method, we need
+groundtruth to do both the training and the validation.
+we randomly selected 450 among the relevant
+threads
+from each forum as selected by the identiﬁcation part. the
+labelling involves ﬁve annotators that manually label each
+thread to a category based on the deﬁnitions and examples
+of the four classes which we listed above. the annotators
+were selected from a educated and technically savvy group
+of individuals to improve the quality of the labels. we then
+combine the “votes”, and assign the class selected by the
+majority.
+
+we assess the annotators’ agreement based on the fleiss-
+kappa coefﬁcient and we show the results in table 3. we
+see that there is a high annotator agreement across all fo-
+rums as the fleiss-kappa coefﬁcient is 78.6. 92.6, 70.3 for
+offensivecommunity, hackthissite and ethicalhackers re-
+spectively.
+
+with this process, we labelled 1350 posts in three forums
+and we show present our labeled data in table 2. we intend
+to make our groundtruth available to the community after the
+publication of the paper in order to foster follow up research
+1.
+
+1data is provided at the following link for the review process:
+
+https://github.com/icwsmrest2019/restdata
+
+3
+
+10010210410−2100102number of postspercentage of threads100101102100101102number of postspercentage of threads10010110210−2100102number of postspercentage of threadslabel
+offenscomm.
+hackthissite
+ethicalhackers
+
+hacks
+0.778
+0.953
+0.682
+
+services alerts
+0.816
+0.793
+0.766
+
+0.702
+0.966
+0.733
+
+experiences
+0.732
+0.875
+0.620
+
+table 3: assessing the annotator agreement using the fleiss-
+kappa coefﬁcient for each class for our three datasets.
+
+symbol
+
+description
+
+vi
+(cid:126)vi
+vi,k
+tr
+m
+n
+d
+
+w (tr)
+
+d
+(cid:126)p (e)
+
+sim(w, c)
+
+wk
+(cid:126)βk
+(cid:126)βk[i]
+w sl
+tkey
+tsim
+
+word i in a forum
+
+embedded vector for word i
+
+value of dimension k in embedded vector for word i
+
+the dimensions of the word embedding space
+
+thread r
+
+number of words in a thread
+number of words in a forum
+
+set of words in thread r
+set of words in a forum
+
+embedding projection of entity e (word, thread etc)
+
+similarity of vectors w and c
+
+the “center of gravity” word for class k
+
+afﬁnity vector of class k
+
+value of afﬁnity vector of class k at index i
+keyword set l for identifying relevant threads
+
+keyword threshold in identifying relevant threads
+similarity threshold in identifying relevant threads
+
+table 4: the symbol table with the key notations.
+
+challenges of simple keyword-based ﬁltering
+
+given a set of keywords, the most straightforward approach
+in identifying relevant documents (or thread here) is to count
+the combined frequency with which these keywords appear
+in the document. a user needs to identify the keywords
+that best describe the topics and concepts of interest, which
+can be challenging for non-trivial scenarios [24]. we outline
+some of the challenges below.
+• the user may not be able to provide all keywords of in-
+terest. in some cases, the user is not aware of a term, and
+in some cases, this not even possible: consider the case
+where we want to ﬁnd the name of a new malware that
+has not yet emerged.
+
+• stemming, variations and compound words is a concern.
+the root of a word can appear in many different versions:
+e.g. hackers, hacking, hacked hackable, etc. there exist
+partial solutions for stem but challenges still remain [7].
+• spelling errors and modiﬁcations and linguistic varia-
+tions. especially for an international forum, different lan-
+guages and backgrounds can add noise.
+
+the above challenges motivated us to consider a new ap-
+proach that uses a small number of indicative keywords to
+create a seed set of threads, and then use similarity in the em-
+bedding space to ﬁnd more similar threads, as we describe
+in the next section.
+
+4
+
+identifying threads of interest
+
+we present our approach for selecting relevant threads start-
+ing from sets of keywords provided by the user. our ap-
+proach consists of the following phases: (a) a keyword
+matching step, where we use the user-deﬁned keywords to
+identify relevant threads that contain these keywords, and (b)
+a similarity-based phase, where we identify threads that are
+“similar” to the ones identiﬁed above. the similarity is es-
+tablished at the word embedding space as we describe later.
+
+phase 1: keyword-based selection
+given a set or sets of keywords, we identify the threads
+where these keywords appear. a simple text matching ap-
+proach can distinguish all occurrence of such keywords in
+the forum threads. in more detail, we follow the steps be-
+low:
+
+step 1: the user provide a set or sets of keywords w sl,
+which capture the user’s topics of interest. having sets of
+keywords enables the user to specify combinations of con-
+cepts. for example, in our case we use, the following sets:
+(a) hacking related, (b) exhibiting concern and agitation, and
+(c) searching and questioning.
+
+step 2: we count the frequency of each keyword in all
+the threads. this can be done easily with elastic search or
+any other straightforward implementation.
+
+step 3: we identify the relevant threads, as the threads
+that contain a sufﬁcient number of keywords from each set
+of keywords w sl. this can be deﬁned by a threshold, tkey l,
+for each set of keywords.
+
+going beyond simple thresholds in this space, we envi-
+sion a ﬂexible system, where the user can specify complex
+queries that involve combinations of several different key-
+word sets w sl. for example, the user may want to ﬁnd
+threads with: (a) at least 5 keywords from set w s1 and 3
+keywords from w s2, or (b) at least 10 keywords from w s3.
+
+phase 2: similarity-based selection
+we propose an approach to extract additional relevant
+threads based on their similarity to existing relevant threads.
+our approach is inspired by and combines elements from
+earlier approachs [15, 20], which we discuss and contrast
+with our work in the related work section.
+
+overview of our approach. our approach follows the
+steps below, which are also depicted visually in ﬁgure 1.
+the input is a forum, a set of keywords, and set of relevant
+threads, as identiﬁed by the keyword-based phase above.
+
+step 1. determining the embedding space. we project
+every word as a point in a m-dimensional space using a word
+embedding approach. therefore, every word is represented
+by a vector of m dimensions.
+
+step 2. projecting threads. we project all the threads in
+an appropriately constructed multi-dimensional space: both
+the relevant threads selected from the keyword-based selec-
+tion and the non-selected ones. the thread projection is de-
+rived from the projections of its words, as we describe below.
+step 3. identifying relevant threads. we identify more
+relevant threads among the non-selected threads that are
+
+“sufﬁciently-close” to the relevant threads in the thread em-
+bedding space.
+
+the advantage of using similarity at the level of threads
+is that thread similarity can detect high-order levels of sim-
+ilarity, beyond keyword-matching. thus, we can identify
+threads that do not necessary exhibit the keywords, but use
+other words for the same “concept”. we show examples of
+that in tables 9 and 10.
+
+our similarity-base selection in depth. we provide
+
+some details in several aspects of our approach.
+
+at
+
+step 1: in depth. we train a skip-gram word embed-
+ding model to project every word as a vector in a multi-
+dimensional space [15]. note that we could not use pre-
+trained embedding models, since there are many words in
+our corpus that do not exist in the dictionary of previous
+models.
+
+the number of dimensions of the word embedding can
+be speciﬁed by the user: nlp studies usually opt for a few
+hundred dimensions. we discuss how we selected our di-
+mensions in our experiments section.
+
+the end of
+
+this step, every word vi
+
+is pro-
+jected to (cid:126)p (vi) or (cid:126)vi, a real-value m-dimensional vector,
+(vi[1], vi[2], ..., vi[m]). a good embedding ensures that two
+words are similar, if they are close in the embedding space.
+step 2: in depth. we project the threads in an 2m-space,
+by “doubling” the m-dimensional space that we used for
+words as we will show below. the thread projection is a
+function of the vectors of its words and captures both the
+average and the maximum values of the vectors of its words.
+a. capturing the average: pavg(tr). here, we want to
+capture the average “values” of the vectors of the words in
+the thread. for thread tr, the average projection, pavg(tr)
+is calculated as follows for each dimension l in the m-
+dimensional word space:
+
+|w (tr)| · (cid:88)
+
+1
+
+vi∈w (tr)
+
+(cid:126)pavg(tr)[l] =
+
+(cid:126)vi[l],
+
+(1)
+
+recall that w (tr) is the set of words of the thread. for
+simplicity, we refer to projection of word vi as (cid:126)vi instead of
+the more complex (cid:126)p (vi).
+
+b. capturing the high values: pmax(tr). averaging can
+fail to represent adequately the “outlier” values, and to
+overcome this, we calculate a vector of maximum values,
+(cid:126)pmax(tr), for each thread. for each dimension l in the
+word embedding, pmax[l] is the maximum value of that di-
+mension over all existing l-dimension values among all the
+words in the thread, which we can state more formally be-
+low:
+
+(cid:126)pmax(tr)[l] = max
+
+vi∈w (tr)
+
+(cid:126)vi[l]
+
+(2)
+
+finally, we create the projection of thread tr by using both
+these vectors, (cid:126)pavg(tr) and (cid:126)pmax(tr), as this combination
+has been shown to provide good results [20]. speciﬁcally,
+we concatenate the vectors and we create the thread repre-
+sentations in an 2m-dimensional space.
+
+(cid:126)p (tr) = ( (cid:126)pavg(tr), (cid:126)pmax(tr))
+
+(3)
+
+5
+
+step 3: in depth. we identify similar threads at the 2m-
+space-dimensional space of thread embedding from step 2.
+we propose to use the cosine-similarity determine the sim-
+ilarity among threads, which seems to give good results
+in practice. most importantly, we can control what consti-
+tutes a sufﬁciently-similar thread using a threshold tsim.
+the threshold needs to strike a balance between being to
+selective and too loose in its deﬁnition of similarity. fur-
+thermore, note the right threshold value also depends on the
+nature of the problem and the user preferences. for exam-
+ple, a user may want to be very selective, if the resources for
+further analyzing relevant threads is limited or if the starting
+number of threads is large.
+
+classifying threads of interest
+
+figure 3: a visual overview of our classiﬁer
+
+we present our approach for classifying relevant threads
+into user deﬁned classes. to ground the discussion, we pre-
+sented the four classes on which we focus here, but our ap-
+proach can be applied for any number and type of classes as
+long as there is training data for the supervised learning.
+
+deﬁning afﬁnity. we use the term afﬁnity, (cid:126)βk[i] , to re-
+fer to the “contribution” of word vi in a thread towards our
+belief that the thread belongs to class k.
+
+recall also that each class k is characterized by a group of
+words that we denote as w ordclassk. these sets of words
+are an input to our algorithm and in practice they will be
+provided by the user.
+
+high-level overview creating our classiﬁer. our ap-
+proach consists of the following steps, which are visually
+represented in ﬁgure 3.
+
+step 1. we create a representation of every class k into
+the word embedding space by using the words that deﬁne
+
+v(m,d)sxensemble classiﬁerc(m,c)b(d,c)vc_1(m,d)vc_c(m,d)the class, w ordclassk.
+
+step 2. for all the words in the forum, we calculate the
+
+afﬁnity of the word vi for each class k, (cid:126)βk[i].
+
+step 3. for each class, we create a weighted embedding
+by using the afﬁnity to adjust the embedding projection of
+each word for each class.
+
+step 4. we use weighted embedding to train an ensemble
+
+classiﬁer using supervised learning.
+
+using the classiﬁer. given a thread, we calculate its pro-
+jection in the embedding space, and then we pass it to the
+classiﬁer to determine its class.
+
+our algorithm in more detail. in the remainder of this
+section, we provide a more in depth description of the algo-
+rithm.
+
+step 1: in depth. for each class k, we use the set of words
+w ordclass(k), and to deﬁne a representation, (cid:126)wk, for that
+class in the word embedding space. we project each word in
+w ordclass(k) to the embedding space by using the same
+word embedding model, which we trained in the previous
+section. then, we deﬁne the class vector wk to be the aver-
+age of the word embeddings of the words in w ordclass(k)
+similarly to equation 1. note that these class embedding vec-
+tors correspond to each column of the matrix c(m,c) in ﬁgure
+3, where m in the dimension of the embedding and c is the
+number of classes.
+
+step 2: in depth. the afﬁnity of each word vi in the forum
+for each class is calculated by the similarity of the word vi
+to (cid:126)wk, which represents the class in this space. we calculate
+the proximity using the cosine similarity, as follows:
+
+sim((cid:126)vi, (cid:126)wk) =
+
+(cid:126)vi · (cid:126)wk
+
+||(cid:126)vi|| · || (cid:126)wk||
+
+(4)
+
+(cid:80)
+
+then, for each class k, we create vector (cid:126)βk whose element
+[i] corresponds to the afﬁnity of word vi of the forum d.
+speciﬁcally, we normalize the values by using softmax of
+the similarity vector sim(vi, wk) as follows:
+
+,
+
+(cid:126)βk[i] =
+
+exp(sim((cid:126)vi, (cid:126)wk))
+yj∈d exp(sim((cid:126)yj, (cid:126)wk))
+
+(5)
+where yj ∈ d iterates through all the words in the forum.
+note that (cid:126)βk corresponds to a row k in matrix bd,c in ﬁgure
+3, where c is the number of classes and d is the total number
+of words in the forum.
+
+step 3: in depth. for each class k, we create a “custom”
+word embedding, v ck(m, d) in figure 3. each such matrix
+that is focused on detecting threads of k) and it will be used
+in our ensemble classiﬁcation.
+
+for each class, we create, v ck(m, d), a class-speciﬁc
+word embedding by modifying the word projections, (cid:126)vi us-
+ing the afﬁnity of the word (cid:126)βk[i] for class. formally, we cal-
+culate v ck by calculating column v ck[∗, i] as follows:
+
+v ck[∗, i] = (cid:126)βk[i] · (cid:126)vi
+
+(6)
+
+where (cid:126)βk[i] is the afﬁnity value of word vi for class k.
+for each thread tr, we calculate the projection of the
+thread by calculating (cid:126)pavg(tr) and (cid:126)pmax(tr) using the mod-
+iﬁed word projections, (cid:126)βk[i] · (cid:126)vi, captured in the v ck(m, d)
+
+6
+
+figure 4: selecting the number of dimensions of word em-
+bedding: the accuracy of rest for different dimensions in
+offensivecommunity.
+
+hacks
+tutorial
+guide
+steps
+
+services
+
+alerts
+
+experiences
+
+tool
+price
+pay
+
+announced
+reported
+hacked
+
+article
+story
+
+challenge
+
+table 5: w ordclass, the set of words which ”deﬁne” each
+class.
+
+matrix and using equations 1 and 2. finally, we create the
+projection of each thread in the 2m-space, using equation 3.
+step 4: in depth: we use weighted embeddings of threads
+
+to train an ensemble classiﬁer using supervised learning.
+
+for each class k, we train the classiﬁer by using the
+weighted representation vector in a supervised learning.
+each v ck in figure 3 becomes the basis for a classiﬁer with
+weighted penalty in favor of class k. the ensemble classiﬁer
+combines the classiﬁcation results from each v ck classiﬁer
+using the max-voting approach [9].
+
+using contextual features. apart from the words in the
+forum, we can also consider other types of features, which
+we refer to as contextual features of the threads. one could
+think of various such features, but here we list the features
+that we use in our evaluation: (1) number of newlines, (2)
+length of the text, (3) number of replies in the thread (fol-
+lowing posts after the ﬁrst post), (4) average number of new-
+lines in replies, (5) average length of replies, and (6) the ag-
+gregated frequency of the words of each bag-of-words set
+provided by the user.
+
+these features capture contextual properties of the posts
+in the threads, and provide additional information not nec-
+essarily captured by the words in the thread. empirically,
+we ﬁnd that these features improve the classiﬁcation accu-
+racy signiﬁcantly. the inspiration to introduce such features
+came from manually inspection of posts and threads. for
+example, we observed that hacks and experiences usually
+have longer posts than other. moreover, hacks threads con-
+tain a larger number of newline characters. an interesting
+question is to assess the value of such metrics when used in
+conjuction with word-based features.
+
+experimental results
+
+we present our experimental results and evaluation of our
+approach.
+
+5010020030074.57575.57676.577accuracy percentagedimension (m)conducting our study
+we use the three forums that presented in table 1 and the
+groundtruth, which we created as we explained in section
+deﬁnitions.
+
+keywords sets: we considered three keyword sets to cap-
+ture relevant threads. these keywords set are: (a) hacking re-
+lated, (b) exhibiting concern and agitation, and (c) searching
+and questioning. we collected a set of 300 keywords in three
+sets. we started with a small core group of keywords, which
+we expanded by adding their synonyms using thesaurus.com
+and google’s dictionary. we ended up with 88, 200 and 12
+keywords for the three groups respectively.
+
+these keyword sets are used in extracting relevant threads
+with the keyword-based selection. we select a thread, if
+it contains at
+least one word from each keyword set:
+tkey 1, tkey 2, tkey 3 >= 1. as we discussed earlier, there
+are many different ways to perform this selection in the
+presence of multiple groups of words and depending on the
+needs of the problem.
+
+pre-processing text: as with any nlp method, we do
+several pre-processing steps in order to extract an appropri-
+ate set of words from the target document. first we tokenize
+the documents in to bigrams, then we remove the stopwords,
+numbers and ip addresses based on a recent work [4]. in ad-
+dition, here we opt to focus on the title and the ﬁrst post of a
+threads instead of using all the posts. our rationale is based
+on the two observations regarding the nature of the threads:
+(a) most of them have one post anyway, and (b) the title and
+the post typically deﬁne their essence. in the future, we will
+examine the effect of using the text from more posts from
+each thread.
+
+identiﬁcation: implementation choices. the identiﬁca-
+tion algorithm requires some implementation choices, which
+we describe below.
+
+embedding parameters: we set the window size to 10
+and we tried several different values as the dimension of the
+embedding between 50-300, and we found that m = 100
+with the highest accuracy as depicted in figure 4 and m is in
+the range of choice of other studies in this space.
+
+similarity threshold: tsim = 0.96. the similarity
+threshold tsim determines the “selectiveness” in identify-
+ing similar threads, as we described in a previous section.
+we ﬁnd that a value of 0.96 worked best among all the dif-
+ferent values we tried. it strikes the balance between being:
+sufﬁciently selective to ﬁlter out non-relevant threads, but
+sufﬁciently ﬂexible to identify similar threads.
+
+classiﬁcation: implementation choices. we present the
+
+implementation choices for our classiﬁcation study.
+
+evaluation metrics: we used the accuracy of the classi-
+ﬁcation along with the average weighted f1 score, which is
+designed to take into consideration the size of the different
+classes in the data.
+
+our classiﬁer. we use random forest as our classiﬁca-
+tion engine, which performed better than several others that
+we examined, including svm, neural networks, and k-
+nearest-neighbors. results are not shown due to space limi-
+tations.
+
+class deﬁning words: the set of keywords we have used
+
+for each class are as shown in table 5.
+
+figure 5: the robustness of the similarity approach to the
+initial keywords: number of relevant threads as a function of
+the number of keywords for offensivecommunity.
+
+relev.
+threads
+keyword
+similarity
+total
+total(%)
+
+offenscomm. hackthissite
+
+ethichack
+
+291
+505
+796
+22%
+
+840
+1121
+1961
+23%
+
+893
+1360
+2753
+25%
+
+table 6: the relevant
+identiﬁcation
+method: keywords and similarity. the total percentage refers
+to the selected threads over all the threads in the forum.
+
+threads and their
+
+to
+
+users
+
+linear-algebra
+
+represent
+method
+dimensional data into low-dimensional space,
+effort to capture latent features of the data [11].
+
+baseline methods. we evaluate our approach against ﬁve
+other state of the arts methods, which we brieﬂy describe
+below.
+• bag of words (bow): this methods users the word fre-
+quency (more accurately the tfidf value) as its main fea-
+ture [14, 5, 6].
+• non-negative matrix factorization (nmf): this
+high-
+in an
+• simple word embedding method (swem): there is a
+family of methods that use the word2vec as their basis,
+and use a recently proposed method [20].
+• fasttext (ft): similar to nmf and swem, fasttext
+represents words and text in a low dimensional space [8].
+• label embedding attentive model (leam): this is
+the most recent approach [23] claims to outperform other
+state of art methods including pte [21]. we used their
+provided linear implementation of their attentive model.
+• bidirectional encoder representations from trans-
+formers (bert) : this is a new pre-trained deep bidi-
+rectional transformer for language understanding intro-
+duced by google [3]. bert provides contextual represen-
+tation for text, which can be used for a wide range of nlp
+tasks. as we discuss later, bert did not provide good re-
+sults initially, and we created a tuned version to make the
+comparison more meaningful.
+
+results 1: thread identiﬁcation
+we present the results from the identiﬁcation part of our ap-
+proach.
+
+7
+
+50607080901000200400600% of keywordsnumber of threads  keywordssimilarity60
+keywords %
+offenscomm.
+78.2
+hackthissite 74.82
+68.41
+ethichack
+
+70
+76.9
+72.01
+60.4
+
+80
+72.9
+70.68
+60.8
+
+90
+70.8
+69.92
+57.2
+
+100
+70.1
+69.74
+56.51
+
+avg.
+70.94
+71.43
+60.67
+
+table 7: identiﬁcation: indirect ”gauge” of recall: we re-
+port how many threads our method ﬁnds with 50% keywords
+compared to the keyword based selection with larger sets of
+keywords [60-100]% .
+
+offenscomm. hackthissite
+
+precision
+
+98.2
+
+97.5
+
+ethichack
+
+97.0
+
+avg.
+97.5
+
+table 8: identiﬁcation precision: the precision of the identi-
+ﬁed thread of interest with the similarity-based method.
+
+figure 6: number of relevant thread in each forums iden-
+tiﬁed by our approach: (a) irrelevant (not selected), (b) se-
+lected via keyword matching and (c) selected via similarity.
+
+our similarity-based method is robust to the number
+of initial keywords. we want to evaluate the impact of the
+number of keywords to the similarity based method. in fig-
+ure 5, we show the robustness of each identiﬁcation methods
+to the initial set of keywords for offensivecommunity. by
+adding 60 keywords, from 240 to 300, the keyword-based
+method identiﬁes 25% more threads, while the similarity
+based method has only 7% increment. similarly, doubling
+the initial size of the keywords results in 242% increase for
+the keyword-based method but only 45% in the similarity-
+based method.
+
+we argue that our approach is more robust to the initial
+number of keywords. first, with less number of keywords,
+we retrieve more threads. second, an increase in the num-
+ber of keywords has less relative increase in the number of
+threads. this is an initial indication that our approach can
+achieve good results, even with a small initial set of key-
+words.
+
+evaluation of our approach: high precision and rea-
+sonable recall. we show that our approach is effective in
+identifying relevant threads. evaluating precision and recall
+would have been easy if all the threads in a forum were la-
+belled. instead, we use an indirect method to gauge recall
+and precision as we describe below.
+
+consider
+
+indirect
+
+recall. we
+estimation of
+as
+“groundtruth” the relevant
+threads that we ﬁnd with
+set of keywords in keyword-based selection method and
+report how many of those threads that our method ﬁnds with
+only 50% of the keywords in similarity-based selection. the
+experiment is shown in ﬁgure 5. we use only 50% of the
+keywords to extract the relevant threads with the similarity
+selection approach, and then compare it with the relevant
+threads identiﬁed with larger set of keywords [60-100]%.
+we show in table 7 that with 50% of the keywords we can
+identify more than 60-70% of the relevant threads, which
+we identify if we have more keywords available.
+
+estimating precision. to evaluate precision, we want to
+identify what percentage of the retrieved threads are rele-
+vant. to this end, we resort to manual evaluation. we have
+labeled 300 threads from each dataset retrieved with 50% of
+the keywords and we get our annotators to identify if they
+are relevant. we show the results in table 8. we understand
+
+that on average more than 97.5% of the threads identiﬁed
+with the similarity based method are relevant with an inter-
+annotator agreement fleiss-kappa coefﬁcient of 0.952.
+
+the power of the embedding in determining similar-
+ity. we ﬁnd that the similarity step identiﬁes threads that are
+deemed relevant to a human reader, but are not “obviously
+similar”, if you examine the threads word for word. we pro-
+vide a few examples of threads that were identiﬁed by the
+keyword-based selection, and the related similar threads that
+our approach identiﬁed. table 9 and 10 illustrate how the re-
+trieved thread are similar to the target thread conceptually,
+without matching linguistically
+
+a four-fold thread reduction. our approach reduces the
+amount of threads to only 22-25% of the initial threads as
+shown in table 6. figure 6 depicts the same data visually.
+clearly, these results will vary depending on the keywords
+given by the user and the type of the forum.
+
+results 2: thread classiﬁcation
+we present the results of our classiﬁcation study.
+
+rest compared to the state-of-the-art. our approach
+compares favourably against the competition. table 11 sum-
+marizes the results of the baseline methods and our rest
+for our three forums. rest outperforms other baseline
+methods with at least 1.4 percentage point in accuracy and
+0.7 percentage point in f1 score, except bert. first, us-
+ing bert “right out of the box” did not give good results
+initially. however, we ﬁne-tuned bert for this domain.
+bert performs poorly on two sites, hackthissite and eth-
+icalhackers, while it performs well for offensivecommu-
+nity. we attribute this to the limited training data in terms
+of text size and also the nature of the language users use
+in such forums. for example, we found that the titles of
+two misclassiﬁed threads contained typos and used uncon-
+ventional slang and writing structure “ hw 2 gt st4rtd with
+r3v3r53 3ngin33ring 4 n00bs!!”, “metaxploit 3xplained fa
+b3ginners!!!”. we intend to investigate bert and how it can
+be tuned further in future work. note that methods bow and
+nmf did not assign any instances to the minority classes
+correctly, therefore the value of f1 score in table 11 is re-
+ported as na.
+
+8
+
+offensive comm.hackthissiteethicalhackers0200040006000number of threads  irrelevantkeyword relevantsimilarity relevantselection method
+keyword selected
+
+similarity selected
+
+title
+[ultimate]
+to
+spread your viruses success-
+fully [tutorial]
+botnet qa!
+
+how
+
+the complete beginners
+guide to hacking
+
+[tut]ddos attack - a life les-
+son
+
+post
+educational purposes not mine in this tutorial i will show
+you how to spread your trojans/viruses etc. i will show you
+many methods, and later you choose which one ....
+just something i compiled quickly. im also posting my bot setup
+guide soon. if you want any questions or links added to the
+q&a, please ask and ill add them.
+another great guide i found :d sections: 1) introduction 2) the
+hacker manifesto 3) what is hacking? 4) choosing your path 5)
+where should i start? 6) basic terminology 7) keylogging...
+introduction i know their are a lot more ways to dos than are
+shown here, but ill let you ﬁgure them out yourself. if you ﬁnd
+any mistake in this tutorial please tell me‘what is ´ddos´?
+
+table 9: examples of similar threads for class hacks: threads offering hacking tutorials.
+
+selection method
+keyword selected
+
+title
+blackmailed! how to hack twit-
+ter?
+
+similariry selected
+
+need hacking services
+
+hello hacker members
+
+ﬁnding a person with his email
+
+hi
+
+post
+hey, everyone. im new on this website and i need help. im try-
+ing to hack a twitter account because theyve been harassing me
+and reporting isnt helping at all.
+iim new to this website. im not a hacker. would like to hire
+hacking services to hack email account, facebook account and
+if possible iphone. drop me a pm if you can do it. fee is nego-
+tiable. thanks
+my name is xxxx and im looking for someone to help me
+crack a wordpress password from a site that has stolen all our
+copyrighted content. weve reported to google but is taking for-
+ever. i have the username of the site, just need help to crack the
+password so i can remove our content. please message me with
+details if you can help
+hello guys! i need to ﬁnd out how i can ﬁnd a person ´behind´an
+email! let me explain please ...
+hello everyone im new here and i want to learn how to hack an
+account any account in fact fb twitter even credit card hope you
+code help me out who knows maybe i can help you in the future
+right give and take
+
+table 10: examples of similar threads for class services: threads looking for hacking services.
+
+approaches (on average by 2.4%). the greatest beneﬁciary
+is the bag-of-words method whose accuracy improves by
+roughly 6%.
+
+related work
+
+figure 7: classiﬁcation accuracy for two different features
+sets in 10-fold cross validation in offensivecommunity fo-
+rum.
+
+the features
+
+improves classiﬁcation for all ap-
+proaches. we brieﬂy discussed features in our classiﬁcation
+section. we conduced experiments with and without these
+features for all six algorithms and we show the results in
+figure 7 for offensivecommunity. including the structural
+features in our classiﬁcation improves the accuracy for all
+
+9
+
+we summarize related work group into areas of relevance.
+
+a. identifying entities of interest in security forums.
+recently there have been a few efforts focused on extract-
+ing entities of interest in security forums. a very interesting
+study focuses on the dynamics of the black-market of hack-
+ing goods and services and their pricing [16], which for us
+is one of the categories of interest. some other recent efforts
+focus on identifying malicious ip addresses that are reported
+in the forum [4, 5], which is relatively different task, as there,
+the entity of interest has a well-deﬁned format. another in-
+teresting work [22] uses a word embedding technique focus-
+ing identifying vulnerabilities and exploits.
+
+b. identifying malicious users and events. several stud-
+ies focus on identifying key actors and malicious users in
+security forums by utilizing their social and linguistics be-
+havior. [12, 13, 1]. another work [18] identiﬁes emerg-
+
+bownmfswemfasttextleambertrest65707580accuracy percentage  embeddingembedding+structrualdatasets
+
+offenscomm.
+
+hackthissite
+
+ethicalhackers
+
+metrics
+accuracy
+f1 score
+accuracy
+f1 score
+accuracy
+f1 score
+
+swem
+nmf
+bow
+75.55±0.21
+74.31±0.1
+75.33±0.1
+na 74.15±0.23
+na
+73.27±0.10
+69.46±0.12
+65.3±0.41
+71.89±0.14
+na 70.23±0.13
+58.3± 0.15
+61.3± 0.17
+59.74± 0.21
+na 57.83±0.16
+59.6±0.23
+
+fasttext
+74.64±0.15
+72.5±0.15
+69.92±0.08
+65.81±0.4
+59.73± 0.21
+59.5±0.13
+
+leam
+74.88±0.22
+72.91±0.18
+74.6±0.04
+71.41±0.09
+61.80 ±0.13
+60.9±0.17
+
+bert
+78.58± 0.08
+78.47±0.01
+68.99±0.4
+63.61±0.41
+54.91± 0.32
+51.78±0.15
+
+rest
+77.1±0.18
+75.10±0.14
+76.8± 0.1
+74.47±0.24
+63.3± 0.09
+61.7±0.21
+
+table 11: classiﬁcation: the performance of the ﬁve different methods in classifying threads in 10-fold cross validation.
+
+ing threats by monitoring the behavior of malicious users
+and correlating it with information from security experts on
+twitter. another study [17] detects emerging security con-
+cerns by monitoring the keywords used in forums and other
+online platforms, such as blogs.
+
+c. analyzing other online forums. researchers have an-
+alyzed a wide range of online forums such as blogs, com-
+menting platforms, reddit etc. indicatively, we refer to a few
+recent studies. google [26] analyzed question-answer type
+of forums and they also published the large dataset that they
+collected. another study focusing on detecting question-
+answer threads within a discussion forum using linguistic
+features [2].
+
+despite many common algorithmic approaches, we argue
+that each type of forum and different focus questions neces-
+sitate novel algorithms.
+
+d. nlp, bag-of-words, and word embedding tech-
+niques. natural language processing is a vast ﬁeld, and
+even the more recent approaches, such as query transfor-
+mation and word embedding have beneﬁted from signiﬁ-
+cant numbers of studies [19, 14, 15, 10, 12, 6, 23, 25, 20,
+11]. most recently, several methods focus on combining
+word embedding and deep learning approaches for text clas-
+siﬁcation [23, 25, 20, 3].
+
+we now discuss the most relevant previous efforts. these
+efforts use word embedding representation and they use it
+for classiﬁcation for text, but: (a) neither of those focuses on
+forums, (b) there are some other technical differences with
+our work. the ﬁrst work, predictive text embedding (pte)
+[21], uses a network-based approach, where each thread
+is described by a network of interconnected entities (title,
+body, author etc). the second study, leam [23], uses a
+word embedding and a neural network classiﬁer to to cre-
+ate a thread embedding. leam argues that it outperforms
+pte, and as we show here, we outperform leam. recently
+google introduced bert [3], a deep pre-trained bidirec-
+tional transformers for language understanding which uses
+a pre-trained unsupervised language model on large corpus
+of data. although the power of large data set for training is
+indisputable, at the same time, we saw ﬁrst hand the need
+for some customization for each domain space.
+
+finally, there are some efforts that use doc2vec to iden-
+tify the embedding of a document (equivalently threads in
+our case). however, these techniques would not work well
+here due to the small size of the datasets [10]. this tech-
+nique could be applied in much larger forums, and we will
+consider it in such a scenario in the future.
+
+10
+
+conclusion
+
+there is a wealth of information in security forums, but still,
+the analysis of security forums is in its infancy, despite sev-
+eral promising recent works.
+
+we propose a novel approach to identify and classify
+threads of interest based on a multi-step weighted word
+embedding approach. as we saw, our approach consists of
+two parts: (a) a similarity-based approach to extract rel-
+evant threads reliably, and b) weighted embedding-based
+classiﬁcation method to classify threads of interest into user-
+deﬁned classes. the key novelty of the work is a multi-step
+weighted embedding approach: we project words, threads
+and classes in the embedding space and establish relevance
+and similarity there.
+
+our work is a ﬁrst step towards developing an easy-to-
+use methodology that can harness some of the information
+in security forums. the easy-of-use stems from the ability
+of our method to operate with an initial set of bag-of-words,
+which our system uses to seeds to identify threads that the
+user is interested in.
+
+references
+
+[1] a. abbasi et al. “descriptive analytics: examining
+expert hackers in web forums”. in: 2014 ieee
+joint intelligence and security informatics confer-
+ence. sept. 2014, pp. 56–63.
+
+[4]
+
+[2] gao cong et al. “finding question-answer pairs from
+online forums”. in: proceedings of the 31st annual
+international acm sigir conference on research
+and development in information retrieval. sigir
+’08. singapore, singapore: acm, 2008, pp. 467–474.
+jacob devlin et al. bert: pre-training of deep bidi-
+rectional transformers for language understanding.
+2018. arxiv: 1810.04805 [cs.cl].
+joobin gharibshah, evangelos e. papalexakis, and
+michalis faloutsos. “ripex: extracting malicious ip
+addresses from security forums using cross-forum
+learning”. in: advances in knowledge discovery and
+data mining. cham, 2018, pp. 517–529.
+joobin gharibshah et al. “inferip: extracting action-
+able information from security discussion forums”.
+in: proceedings of the 2017 ieee/acm international
+conference on advances in social networks analysis
+and mining 2017. asonam ’17. sydney, australia:
+acm, 2017, pp. 301–304.
+
+[3]
+
+[5]
+
+[19] harrisen scells and guido zuccon. “generating bet-
+ter queries for systematic reviews”. in: the 41st
+international acm sigir conference on research
+&#38; development in information retrieval. sigir
+’18. ann arbor, mi, usa: acm, 2018, pp. 475–484.
+[20] dinghan shen et al. “baseline needs more love:
+on simple word-embedding-based models and as-
+sociated pooling mechanisms”. in: proceedings of
+the 56th annual meeting of
+the association for
+computational linguistics (volume 1: long papers).
+melbourne, australia: association for computational
+linguistics, 2018, pp. 440–450.
+jian tang, meng qu, and qiaozhu mei. “pte: pre-
+dictive text embedding through large-scale hetero-
+geneous text networks”. in: proceedings of the 21th
+acm sigkdd international conference on knowl-
+edge discovery and data mining. kdd ’15. sydney,
+nsw, australia: acm, 2015, pp. 1165–1174.
+
+[21]
+
+[22] nazgol tavabi et al. darkembed: exploit prediction
+
+with neural language models. tech. rep. 2018.
+
+[23] guoyin wang et al. “joint embedding of words and
+labels for text classiﬁcation”. in: proceedings of the
+56th annual meeting of the association for compu-
+tational linguistics (acl). 2018, pp. 2321–2331.
+
+[24] shuai wang et al. “identifying search keywords for
+finding relevant social media posts.” in: proceed-
+ings of the thirthieth aaai conference on artiﬁcial
+intelligence (aaai-16) (2016), pp. 3052–3058.
+
+[25] hamed zamani and w. bruce croft. “relevance-
+based word embedding”. in: proceedings of the 40th
+international acm sigir conference on research
+and development in information retrieval. sigir
+’17. shinjuku, tokyo, japan: acm, 2017, pp. 505–
+514.
+
+[26] amy x. zhang, bryan culbertson, and praveen
+paritosh. “characterizing online discussion using
+coarse discourse sequences”. in: proceedings of the
+international conference on weblogs and social me-
+dia (2017), pp. 357–366.
+
+[6] peng jin et al. “bag-of-embeddings for text classiﬁ-
+cation”. in: ijcai international joint conference on
+artiﬁcial intelligence 2016-janua (2016), pp. 2824–
+2830.
+
+[7] anjali jivani. “a comparative study of stemming
+algorithms”. in: int. j. comp. tech. appl. 2 (nov.
+2011), pp. 1930–1938.
+
+[8] armand joulin et al. “bag of tricks for efﬁcient text
+classiﬁcation”. in: proceedings of the 15th confer-
+ence of the european chapter of the association for
+computational linguistics: volume 2, short papers.
+valencia, spain: association for computational lin-
+guistics, 2017, pp. 427–431.
+j. kittler et al. “on combining classiﬁers”. in: ieee
+transactions on pattern analysis and machine intel-
+ligence 20.3 (mar. 1998), pp. 226–239.
+
+[9]
+
+[10] quoc le and tomas mikolov. “distributed represen-
+tations of sentences and documents”. in: proceed-
+ings of the 31st international conference on interna-
+tional conference on machine learning - volume 32.
+icml’14. beijing, china: jmlr.org, 2014, pp. ii-
+1188–ii-1196.
+
+[11] daniel d lee and h sebastian seung. “learning the
+parts of objects by non-negative matrix factorization”.
+in: nature 401 (oct. 1999), p. 788.
+
+[12] w. li and h. chen. “identifying top sellers in under-
+ground economy using deep learning-based senti-
+ment analysis”. in: 2014 ieee joint intelligence and
+security informatics conference. sept. 2014, pp. 64–
+67.
+
+[13] e. marin, j. shakarian, and p. shakarian. “mining
+key-hackers on darkweb forums”. in: 2018 1st in-
+ternational conference on data intelligence and se-
+curity (icdis). apr. 2018, pp. 73–80.
+
+[14] andrew mccallum and kamal nigam. in: learning
+for text categorization: papers from the 1998 aaai
+workshop, pp. 41–48.
+
+[15] tomas mikolov et al. “efﬁcient estimation of
+word representations in vector space”. in: corr
+abs/1301.3781 (2013).
+
+[16] rebecca s. portnoff et al. “tools for automated anal-
+ysis of cybercriminal markets”. in: proceedings of
+the 26th international conference on world wide
+web - www ’17 (2017), pp. 657–666.
+
+[17] anna sapienza et al. “discover: mining online
+chatter for emerging cyber threats”. in: companion
+proceedings of the the web conference 2018. www
+’18. lyon, france: international world wide web
+conferences steering committee, 2018, pp. 983–990.
+[18] a. sapienza et al. “early warnings of cyber threats
+in online discussions”. in: 2017 ieee international
+conference on data mining workshops (icdmw).
+nov. 2017, pp. 667–674.
+
+11
+
+
