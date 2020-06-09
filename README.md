@@ -30,6 +30,6 @@ Packages needed: pandas, operator, collections, os, sys, codecs, tkinter, nltk, 
 
 How to run the tool:
   1. Download the project
-  2. install the prerequisite packages
-  3. run the main.py usinf F5
+  2. Install the prerequisite packages
+  3. Run the main.py usinf F5
 
